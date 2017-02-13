@@ -13,12 +13,20 @@ impl Vec3 {
         Vec3 { x: x, y: y, z: z }
     }
 
+    pub fn new2d(x: f32, y: f32) -> Vec3 {
+        Vec3 { x: x, y: y, z: 0.0 }
+    }
+
     pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
     pub fn unit(self) -> Vec3 {
         self / self.length()
+    }
+
+    pub fn dot(lhs: Vec3, rhs: Vec3) -> f32 {
+        lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z
     }
 }
 
@@ -45,6 +53,13 @@ impl Mul<f32> for Vec3 {
     }
 }
 
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+    fn mul(self, rhs: Vec3) -> Vec3 {
+        rhs * self
+    }
+}
+
 impl Div<f32> for Vec3 {
     type Output = Vec3;
     fn div(self, rhs: f32) -> Vec3 {
@@ -59,12 +74,50 @@ impl Sub for Vec3 {
     }
 }
 
+struct Ray {
+    origin: Vec3,
+    direction: Vec3
+}
+
+impl Ray {
+    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        Ray { origin: origin, direction: direction }
+    }
+
+    pub fn point_at(self, t: f32) -> Vec3 {
+        self.origin + self.direction * t
+    }
+}
+
+fn color(ray: Ray) -> Vec3 {
+    let d = ray.direction.unit();
+
+    // transform y from -1..1 to 0..1
+    let t = 0.5 * (d.y + 1.0);
+
+    // blend white to blue
+    return blend(Vec3::new(1.0, 1.0, 1.0), Vec3::new(0.5, 0.7, 1.0), t);
+}
+
+fn blend(from: Vec3, to: Vec3, t: f32) -> Vec3 {
+    return (1.0 - t) * from + t * to;
+}
+
+
 fn write_ppm(width: i32, height: i32) -> String {
+    let lower_left = Vec3::new(-2.0, -1.0, -1.0);
+    let horizontal = Vec3::new2d(4.0, 0.0);
+    let vertical = Vec3::new2d(0.0, 2.0);
+    let origin = Vec3::new2d(0.0, 0.0);
+
     let mut result = String::new();
     result += &format!("P3\n{} {}\n255\n", width, height);
     for x in (0..height + 1).rev() {
         for y in 0..width {
-            let col = Vec3::new(y as f32 / width as f32, x as f32 / height as f32, 0.2) * 255.99;
+            let u = y as f32 / width as f32;
+            let v = x as f32 / height as f32;
+            let r = Ray::new(origin, lower_left + u * horizontal + v * vertical);
+            let col = color(r) * 255.99;
             result += &format!("{} {} {}\n", col.x as i32, col.y as i32, col.z as i32);
         }
     }
@@ -74,7 +127,6 @@ fn write_ppm(width: i32, height: i32) -> String {
 fn main() {
     println!("{}", write_ppm(200, 100));
 }
-
 
 // Tests
 
@@ -91,4 +143,15 @@ fn vector_length() {
 #[test]
 fn vector_unit() {
     assert_eq!(Vec3::new(10.0, 20.0, 30.0).unit(), Vec3::new(0.2672, 0.5345, 0.8017));
+}
+
+#[test]
+fn ray_point_at() {
+    let ray = Ray::new(Vec3::new2d(0.0, 0.0), Vec3::new2d(1.0, 2.0));
+    assert_eq!(ray.point_at(2.5), Vec3::new2d(2.5, 5.0))
+}
+
+#[test]
+fn vec3_dot() {
+    assert_eq!(Vec3::dot(Vec3::new(2.0, 3.0, 4.0), Vec3::new(0.5, 0.1, 0.25)), 1.0 + 0.3 + 1.0)
 }
