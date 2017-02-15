@@ -1,5 +1,7 @@
 use std::ops::{Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
+use std::io::prelude::*;
+use std::fmt::Debug;
 
 #[derive(Copy, Clone, Debug)]
 struct Vec3 {
@@ -9,6 +11,7 @@ struct Vec3 {
 }
 
 const V3_ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+const V3_ONE: Vec3 = Vec3 { x: 1.0, y: 1.0, z: 1.0 };
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
@@ -84,7 +87,7 @@ struct Ray {
 
 impl Ray {
     pub fn new(origin: Vec3, direction: Vec3) -> Ray {
-        Ray { origin: origin, direction: direction }
+        Ray { origin: origin, direction: direction.unit() }
     }
 
     pub fn point_at(self, t: f32) -> Vec3 {
@@ -105,9 +108,12 @@ fn sphere(center: Vec3, radius: f32, ray: Ray) -> Option<HitResult> {
     let c = Vec3::dot(oc, oc) - radius * radius;
     let discriminant = b * b - 4.0 * a * c;
     if discriminant > 0.0 {
+        let t = (-b - discriminant.sqrt()) / (2.0 * a);
+        write_err(t);
+        let point_on_sphere = ray.point_at(t);
         return Some(HitResult {
-            point: V3_ZERO,
-            normal: V3_ZERO,
+            point: point_on_sphere,
+            normal: (point_on_sphere - center).unit(),
             color: V3_ZERO
         })
     }
@@ -116,17 +122,20 @@ fn sphere(center: Vec3, radius: f32, ray: Ray) -> Option<HitResult> {
 
 fn color(ray: Ray) -> Vec3 {
     let sphere_hit = sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, ray);
-    if sphere_hit.is_some() {
-        return Vec3::new(1.0, 0.0, 0.0)
+    match sphere_hit {
+        Some(hit_result) => {
+            return (hit_result.normal + V3_ONE) / 2.0;
+        },
+        None => {
+            let d = ray.direction.unit();
+
+            // transform y from -1..1 to 0..1
+            let t = 0.5 * (d.y + 1.0);
+
+            // blend white to blue
+            return blend(Vec3::new(1.0, 1.0, 1.0), Vec3::new(0.5, 0.7, 1.0), t);
+        }
     }
-
-    let d = ray.direction.unit();
-
-    // transform y from -1..1 to 0..1
-    let t = 0.5 * (d.y + 1.0);
-
-    // blend white to blue
-    return blend(Vec3::new(1.0, 1.0, 1.0), Vec3::new(0.5, 0.7, 1.0), t);
 }
 
 fn blend(from: Vec3, to: Vec3, t: f32) -> Vec3 {
@@ -143,6 +152,7 @@ fn write_ppm(width: i32, height: i32) -> String {
     let mut result = String::new();
     result += &format!("P3\n{} {}\n255\n", width, height);
     for x in (0..height + 1).rev() {
+        write_err(height - x);
         for y in 0..width {
             let u = y as f32 / width as f32;
             let v = x as f32 / height as f32;
@@ -154,8 +164,14 @@ fn write_ppm(width: i32, height: i32) -> String {
     return result;
 }
 
+fn write_err<T: Debug>(s: T) {
+    let mut stderr = std::io::stderr();
+    writeln!(&mut stderr, "{:?}", s).expect("Could not write to stderr");
+}
+
 fn main() {
-    println!("{}", write_ppm(800, 400));
+//    println!("{}", write_ppm(40, 20));
+        println!("{}", write_ppm(400, 200));
 }
 
 // Tests
