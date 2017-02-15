@@ -8,6 +8,8 @@ struct Vec3 {
     z: f32
 }
 
+const V3_ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
         Vec3 { x: x, y: y, z: z }
@@ -74,6 +76,7 @@ impl Sub for Vec3 {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct Ray {
     origin: Vec3,
     direction: Vec3
@@ -89,7 +92,34 @@ impl Ray {
     }
 }
 
+struct HitResult {
+    point: Vec3,
+    normal: Vec3,
+    color: Vec3
+}
+
+fn sphere(center: Vec3, radius: f32, ray: Ray) -> Option<HitResult> {
+    let oc = ray.origin - center;
+    let a = Vec3::dot(ray.direction, ray.direction);
+    let b = 2.0 * Vec3::dot(oc, ray.direction);
+    let c = Vec3::dot(oc, oc) - radius * radius;
+    let discriminant = b * b - 4.0 * a * c;
+    if discriminant > 0.0 {
+        return Some(HitResult {
+            point: V3_ZERO,
+            normal: V3_ZERO,
+            color: V3_ZERO
+        })
+    }
+    return None;
+}
+
 fn color(ray: Ray) -> Vec3 {
+    let sphere_hit = sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, ray);
+    if sphere_hit.is_some() {
+        return Vec3::new(1.0, 0.0, 0.0)
+    }
+
     let d = ray.direction.unit();
 
     // transform y from -1..1 to 0..1
@@ -125,7 +155,7 @@ fn write_ppm(width: i32, height: i32) -> String {
 }
 
 fn main() {
-    println!("{}", write_ppm(200, 100));
+    println!("{}", write_ppm(800, 400));
 }
 
 // Tests
