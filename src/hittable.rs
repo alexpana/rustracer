@@ -45,7 +45,7 @@ impl Hittable for Background {
     fn hit(self, ray: Ray) -> Option<HitResult> {
         // transform y from -1..1 to 0..1
         let t = 0.5 * (ray.direction.y + 1.0);
-        // blend white to blue
+        
         let color = blend(self.color_a, self.color_b, t);
 
         Some(HitResult {
