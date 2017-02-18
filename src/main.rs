@@ -49,11 +49,32 @@ fn color(ray: Ray) -> Vec3 {
 }
 
 fn rand() -> f32 {
-    let between = Range::new(-1.0, 1.0);
+    let between = Range::new(-0.5, 0.5);
     return between.ind_sample(&mut rand::thread_rng());
 }
 
+fn random_samples(count: usize) -> Vec<(f32, f32, f32)> {
+    let mut result: Vec<(f32, f32, f32)> = Vec::with_capacity(count);
+    for sample in 0..count {
+        result.push((rand(), rand(), 1.0 / count as f32));
+    }
+
+    return result;
+}
+
+fn fixed_samples() -> Vec<(f32, f32, f32)> {
+    vec![
+        (0.0, 0.0, 0.4),
+        (-0.1, 0.0, 0.15),
+        (0.1, 0.0, 0.15),
+        (0.0, 0.1, 0.15),
+        (0.0, -0.1, 0.15),
+    ]
+}
+
 fn write_ppm(width: i32, height: i32) -> String {
+    const SAMPLE_COUNT: usize = 60;
+
     let camera = Camera {
         origin: Vec3::new2d(0.0, 0.0),
         lower_left: Vec3::new(-2.0, -1.0, -1.0),
@@ -61,25 +82,17 @@ fn write_ppm(width: i32, height: i32) -> String {
         height: height as f32
     };
 
-    let samples = 30;
-
     let mut result = String::new();
     result += &format!("P3\n{} {}\n255\n", width, height);
     for x in (0..height + 1).rev() {
         for y in 0..width {
             let mut color_acc = vec3::ZERO;
 
-            for sample in 0..samples {
-                let offset_x = rand() / 2.0;
-                let offset_y = rand() / 2.0;
-                //                let scale = (1.0 - (offset_x + offset_y) / 2.0);
-                let scale = 1.0 / samples as f32;
-                let r = camera.ray(y as f32 + offset_x, x as f32 + offset_y);
-                color_acc = color_acc + color(r) * scale;
+            for sample in random_samples(SAMPLE_COUNT) {
+                let r = camera.ray(y as f32 + sample.0, x as f32 + sample.1);
+                color_acc = color_acc + color(r) * sample.2;
             }
-
             color_acc = color_acc * 255.0;
-
             result += &format!("{} {} {}\n", color_acc.x as i32, color_acc.y as i32, color_acc.z as i32);
         }
     }
