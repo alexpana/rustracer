@@ -1,12 +1,18 @@
+extern crate rand;
+
 mod vec3;
 mod ray;
 mod hittable;
+mod camera;
 
 use vec3::*;
 use ray::*;
 use hittable::*;
+use camera::Camera;
 
 use std::f32;
+use rand::distributions::{IndependentSample, Range};
+use rand::Rng;
 
 const T_MIN: f32 = 0.1;
 const T_MAX: f32 = f32::MAX;
@@ -42,21 +48,39 @@ fn color(ray: Ray) -> Vec3 {
     }
 }
 
+fn rand() -> f32 {
+    let between = Range::new(-1.0, 1.0);
+    return between.ind_sample(&mut rand::thread_rng());
+}
+
 fn write_ppm(width: i32, height: i32) -> String {
-    let lower_left = Vec3::new(-2.0, -1.0, -1.0);
-    let horizontal = Vec3::new2d(4.0, 0.0);
-    let vertical = Vec3::new2d(0.0, 2.0);
-    let origin = Vec3::new2d(0.0, 0.0);
+    let camera = Camera {
+        origin: Vec3::new2d(0.0, 0.0),
+        lower_left: Vec3::new(-2.0, -1.0, -1.0),
+        width: width as f32,
+        height: height as f32
+    };
+
+    let samples = 30;
 
     let mut result = String::new();
     result += &format!("P3\n{} {}\n255\n", width, height);
     for x in (0..height + 1).rev() {
         for y in 0..width {
-            let u = y as f32 / width as f32;
-            let v = x as f32 / height as f32;
-            let r = Ray::new(origin, lower_left + u * horizontal + v * vertical);
-            let col = color(r) * 255.99;
-            result += &format!("{} {} {}\n", col.x as i32, col.y as i32, col.z as i32);
+            let mut color_acc = vec3::ZERO;
+
+            for sample in 0..samples {
+                let offset_x = rand() / 2.0;
+                let offset_y = rand() / 2.0;
+                //                let scale = (1.0 - (offset_x + offset_y) / 2.0);
+                let scale = 1.0 / samples as f32;
+                let r = camera.ray(y as f32 + offset_x, x as f32 + offset_y);
+                color_acc = color_acc + color(r) * scale;
+            }
+
+            color_acc = color_acc * 255.0;
+
+            result += &format!("{} {} {}\n", color_acc.x as i32, color_acc.y as i32, color_acc.z as i32);
         }
     }
     return result;
