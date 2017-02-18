@@ -2,6 +2,8 @@ use vec3::{blend, Vec3};
 use vec3;
 use ray::*;
 
+use std::f32;
+
 pub struct HitResult {
     pub t: f32,
     pub point: Vec3,
@@ -38,7 +40,7 @@ impl Hittable for Sphere {
                     t: t,
                     point: point_on_sphere,
                     normal: (point_on_sphere - self.origin).unit(),
-                    color: vec3::ZERO
+                    color: vec3::RED
                 })
             }
         }
@@ -53,7 +55,6 @@ pub struct Background {
 
 impl Hittable for Background {
     fn hit(&self, ray: Ray, _: f32, tmax: f32) -> Option<HitResult> {
-        // transform y from -1..1 to 0..1
         let t = 0.5 * (ray.direction.y + 1.0);
 
         let color = blend(self.color_a, self.color_b, t);
@@ -64,5 +65,31 @@ impl Hittable for Background {
             color: color,
             normal: color * 2.0 - vec3::ONE
         })
+    }
+}
+
+pub struct Scene {
+    pub objects: Vec<Box<Hittable>>,
+    pub background: Background
+}
+
+impl Hittable for Scene {
+    fn hit(&self, ray: Ray, tmin: f32, tmax: f32) -> Option<HitResult> {
+        let mut closest_hit_distance = tmax;
+        let mut closest_hit = Option::None;
+
+        for object in self.objects.iter() {
+            match (*object).hit(ray, tmin, tmax) {
+                Some(hit) => {
+                    if hit.t <= closest_hit_distance {
+                        closest_hit_distance = hit.t;
+                        closest_hit = Some(hit);
+                    }
+                }
+                None => ()
+            }
+        }
+
+        closest_hit
     }
 }
