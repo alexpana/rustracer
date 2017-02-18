@@ -8,8 +8,12 @@ pub struct Vec3 {
     pub z: f32
 }
 
-pub const V3_ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
-pub const V3_ONE: Vec3 = Vec3 { x: 1.0, y: 1.0, z: 1.0 };
+pub const ZERO: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
+pub const ONE: Vec3 = Vec3 { x: 1.0, y: 1.0, z: 1.0 };
+
+pub const RED: Vec3 = Vec3 { x: 1.0, y: 0.0, z: 0.0 };
+pub const GREEN: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
+pub const BLUE: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 1.0 };
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
@@ -80,4 +84,29 @@ impl Sub for Vec3 {
 
 pub fn blend(from: Vec3, to: Vec3, t: f32) -> Vec3 {
     return (1.0 - t) * from + t * to;
+}
+
+#[cfg(test)]
+mod tests {
+    use Vec3;
+
+    #[test]
+    fn scalar_division() {
+        assert_eq! (Vec3::new(10.0, 20.0, 30.0) / 10.0, Vec3::new(1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn length() {
+        assert_eq! (Vec3::new(10.0, 10.0, 10.0).length(), 17.320509);
+    }
+
+    #[test]
+    fn unit() {
+        assert_eq! (Vec3::new(10.0, 20.0, 30.0).unit(), Vec3::new(0.2672, 0.5345, 0.8017));
+    }
+
+    #[test]
+    fn dot() {
+        assert_eq! (Vec3::dot(Vec3::new(2.0, 3.0, 4.0), Vec3::new(0.5, 0.1, 0.25)), 1.0 + 0.3 + 1.0)
+    }
 }

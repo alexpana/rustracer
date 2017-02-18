@@ -6,18 +6,39 @@ use vec3::*;
 use ray::*;
 use hittable::*;
 
-fn color(ray: Ray) -> Vec3 {
-    let s = Sphere { origin: Vec3::new(0.0, 0.0, -1.0), radius: 0.5 };
-    let b = Background { color_a: Vec3::new(1.0, 1.0, 1.0), color_b: Vec3::new(0.5, 0.7, 1.0) };
+use std::f32;
 
-    let sphere_hit = s.hit(ray);
-    match sphere_hit {
-        Some(hit_result) => {
-            return (hit_result.normal + V3_ONE) / 2.0;
-        },
-        None => {
-            return b.hit(ray).unwrap().color;
+const T_MIN: f32 = 0.1;
+const T_MAX: f32 = f32::MAX;
+
+fn color(ray: Ray) -> Vec3 {
+    let scene: Vec<Box<Hittable>> = vec![
+        Box::new(Sphere { origin: Vec3::new(0.0, -100.5, -1.0), radius: 100.0 }),
+        Box::new(Sphere { origin: Vec3::new(0.0, 0.0, -1.0), radius: 0.5 }),
+        Box::new(Background { color_a: Vec3::new(1.0, 1.0, 1.0), color_b: Vec3::new(0.5, 0.7, 1.0) })
+    ];
+
+    let mut closest_hit_distance = T_MAX;
+    let mut closest_hit = Option::None;
+
+    for h in scene {
+        match (*h).hit(ray, T_MIN, T_MAX) {
+            Some(hit) => {
+                if hit.t <= closest_hit_distance {
+                    closest_hit_distance = hit.t;
+                    closest_hit = Some(hit);
+                }
+            }
+            None => ()
         }
+    }
+
+    match closest_hit {
+        Some(hit) => Vec3::new(
+            f32::max(hit.normal.x, 0.0),
+            f32::max(hit.normal.y, 0.0),
+            f32::max(hit.normal.z, 0.0)),
+        None => RED
     }
 }
 
@@ -43,32 +64,4 @@ fn write_ppm(width: i32, height: i32) -> String {
 
 fn main() {
     println!("{}", write_ppm(400, 200));
-}
-
-// Tests
-
-#[test]
-fn vector_scalar_division() {
-    assert_eq! (Vec3::new(10.0, 20.0, 30.0) / 10.0, Vec3::new(1.0, 2.0, 3.0));
-}
-
-#[test]
-fn vector_length() {
-    assert_eq! (Vec3::new(10.0, 10.0, 10.0).length(), 17.320509);
-}
-
-#[test]
-fn vector_unit() {
-    assert_eq! (Vec3::new(10.0, 20.0, 30.0).unit(), Vec3::new(0.2672, 0.5345, 0.8017));
-}
-
-#[test]
-fn ray_point_at() {
-    let ray = Ray::new(Vec3::new2d(0.0, 0.0), Vec3::new2d(1.0, 2.0));
-    assert_eq! (ray.point_at(2.5), Vec3::new2d(1.0, 2.0).unit() * 2.5)
-}
-
-#[test]
-fn vec3_dot() {
-    assert_eq! (Vec3::dot(Vec3::new(2.0, 3.0, 4.0), Vec3::new(0.5, 0.1, 0.25)), 1.0 + 0.3 + 1.0)
 }
