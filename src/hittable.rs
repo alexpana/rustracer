@@ -17,7 +17,8 @@ pub trait Hittable {
 
 pub struct Sphere {
     pub origin: Vec3,
-    pub radius: f32
+    pub radius: f32,
+    pub color: Vec3
 }
 
 impl Hittable for Sphere {
@@ -40,7 +41,7 @@ impl Hittable for Sphere {
                     t: t,
                     point: point_on_sphere,
                     normal: (point_on_sphere - self.origin).unit(),
-                    color: vec3::RED
+                    color: self.color
                 })
             }
         }
@@ -69,7 +70,7 @@ impl Hittable for Background {
 }
 
 pub struct Scene {
-    pub objects: Vec<Box<Hittable>>,
+    pub objects: Vec<Box<Hittable + Sync + Send>>,
     pub background: Background
 }
 
