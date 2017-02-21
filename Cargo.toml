@@ -6,3 +6,4 @@ authors = ["Alexandru Pana <astronothing@gmail.com>"]
 [dependencies]
 rand = "0.3"
 crossbeam = "0.2"
+time = "0.1"

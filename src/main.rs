@@ -6,12 +6,14 @@ mod ray;
 mod hittable;
 mod camera;
 mod sampling;
+mod time;
 
 use vec3::*;
 use ray::*;
 use hittable::*;
 use camera::Camera;
 use sampling::*;
+use time::Timer;
 
 use std::f32;
 use std::fs::File;
@@ -21,7 +23,7 @@ use std::thread;
 
 const T_MIN: f32 = 0.001;
 const T_MAX: f32 = f32::MAX;
-const SAMPLE_COUNT: usize = 300;
+const SAMPLE_COUNT: usize = 100;
 
 fn color(ray: Ray, scene: &Scene) -> Vec3 {
     let hit = scene.hit(ray, T_MIN, T_MAX);
@@ -41,7 +43,9 @@ fn color(ray: Ray, scene: &Scene) -> Vec3 {
 }
 
 fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buffer: &mut [u8]) {
-    print!("Tracing at offset {} size {}:{}\n", offset, image_buffer.len(), image_buffer.len() / 3);
+    let timer = Timer::new();
+
+    print!("Started tracing at offset {}\n", offset);
 
     let camera = &shared_camera;
 
@@ -55,16 +59,12 @@ fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buf
             color_acc = color_acc + color(r, &scene) * sample.2;
         }
 
-        if i % 100 == 0 {
-            print!("offset: {} current index: {}\n", offset, i);
-        }
-
         image_buffer[i * 3 + 0] = (color_acc.x * 255.0) as u8;
         image_buffer[i * 3 + 1] = (color_acc.y * 255.0) as u8;
         image_buffer[i * 3 + 2] = (color_acc.z * 255.0) as u8;
     }
 
-    print!("Done tracing at offset {}\n", offset);
+    print!("Done tracing at offset {} in {}s\n", offset, timer.count_seconds());
 }
 
 fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
@@ -105,6 +105,7 @@ fn main() {
 
     let mut buffer = vec![0u8; camera.width * camera.height * 3];
 
+    let timer = Timer::new();
     crossbeam::scope(|scope| {
         let chunk_buffer_size = (camera.width * camera.height * 3) / THREAD_COUNT;
         let chunks: Vec<&mut [u8]> = buffer.chunks_mut(chunk_buffer_size).collect();
@@ -119,6 +120,8 @@ fn main() {
             });
         }
     });
+    println!("All threads finished in {}s", timer.count_seconds());
+
 
     write_ppm(&buffer, (camera.width, camera.height), "test2.ppm");
 }
