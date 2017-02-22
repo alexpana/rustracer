@@ -1,0 +1,8 @@
+{
+  "objects": [
+    {"type": "sphere", "origin": [0.0, -100.5, -2.0], "radius": 100.0, "color": [0.7, 0.4, 0.5]},
+    {"type": "sphere", "origin": [0.0, 0.0, -2.0], "radius": 0.5, "color": [0.3, 0.8, 0.4]},
+    {"type": "sphere", "origin": [1.0, 0.0, -2.0], "radius": 0.5, "color": [1.0, 0.4, 0.4]}
+  ],
+  "background": {"from": [1, 1, 1], "to": [0.5, 0.7, 1.0]}
+}

@@ -11,7 +11,7 @@ pub struct HitResult {
     pub color: Vec3
 }
 
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
     fn hit(&self, ray: Ray, tmin: f32, tmax: f32) -> Option<HitResult>;
 }
 
@@ -50,15 +50,15 @@ impl Hittable for Sphere {
 }
 
 pub struct Background {
-    pub color_a: Vec3,
-    pub color_b: Vec3
+    pub color_from: Vec3,
+    pub color_to: Vec3
 }
 
 impl Hittable for Background {
     fn hit(&self, ray: Ray, _: f32, tmax: f32) -> Option<HitResult> {
         let t = 0.5 * (ray.direction.y + 1.0);
 
-        let color = blend(self.color_a, self.color_b, t);
+        let color = blend(self.color_from, self.color_to, t);
 
         Some(HitResult {
             t: tmax - 1.0,
@@ -70,7 +70,7 @@ impl Hittable for Background {
 }
 
 pub struct Scene {
-    pub objects: Vec<Box<Hittable + Sync + Send>>,
+    pub objects: Vec<Box<Hittable>>,
     pub background: Background
 }
 

@@ -1,5 +1,6 @@
 use std::ops::{Add, Sub, Mul, Div};
 use std::cmp::PartialEq;
+use rustc_serialize::json;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {

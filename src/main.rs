@@ -2,6 +2,7 @@
 extern crate clap;
 extern crate rand;
 extern crate scoped_pool;
+extern crate rustc_serialize;
 
 mod camera;
 mod config;
@@ -101,7 +102,7 @@ fn main() {
             Box::new(Sphere { origin: Vec3::new(0.0, 0.0, -2.0), radius: 0.5, color: Vec3::new(0.3, 0.8, 0.4) }),
             Box::new(Sphere { origin: Vec3::new(1.0, 0.0, -2.0), radius: 0.5, color: Vec3::new(1.0, 0.4, 0.4) }),
         ],
-        background: Background { color_a: Vec3::new(1.0, 1.0, 1.0), color_b: Vec3::new(0.5, 0.7, 1.0) },
+        background: Background { color_from: Vec3::new(1.0, 1.0, 1.0), color_to: Vec3::new(0.5, 0.7, 1.0) },
     });
 
     let camera = Arc::new(Camera {
