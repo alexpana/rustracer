@@ -28,7 +28,6 @@ use std::thread;
 
 const T_MIN: f32 = 0.001;
 const T_MAX: f32 = f32::MAX;
-const SAMPLE_COUNT: usize = 300;
 
 fn color(ray: Ray, scene: &Scene) -> Vec3 {
     let hit = scene.hit(ray, T_MIN, T_MAX);
@@ -47,10 +46,8 @@ fn color(ray: Ray, scene: &Scene) -> Vec3 {
     }
 }
 
-fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buffer: &mut [u8]) {
+fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, config: Config, offset: usize, image_buffer: &mut [u8]) {
     let timer = Timer::new();
-
-    //    print!("Started tracing at offset {}\n", offset);
 
     let camera = &shared_camera;
 
@@ -59,7 +56,7 @@ fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buf
         let y = (offset + i) % camera.width;
         let mut color_acc = vec3::ZERO;
 
-        for sample in random_samples(SAMPLE_COUNT) {
+        for sample in random_samples(config.sample_count) {
             let r = camera.ray(y as f32 + sample.0, x as f32 + sample.1);
             color_acc = color_acc + color(r, &scene) * sample.2;
         }
@@ -68,8 +65,6 @@ fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buf
         image_buffer[i * 3 + 1] = (color_acc.y * 255.0) as u8;
         image_buffer[i * 3 + 2] = (color_acc.z * 255.0) as u8;
     }
-
-    //    print!("Done tracing at offset {} in {}s\n", offset, timer.count_seconds());
 }
 
 fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
@@ -90,8 +85,6 @@ fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
 }
 
 fn main() {
-    const CHUNK_COUNT: usize = 100;
-
     let matches = Config::get_app().get_matches();
     let config = Config::new(matches);
     config.print();
@@ -107,9 +100,9 @@ fn main() {
 
     let camera = Arc::new(Camera {
         origin: Vec3::new2d(0.0, 0.0),
-        lower_left: Vec3::new(-1.0, -0.5, -1.0),
-        width: 400,
-        height: 200
+        lower_left: Vec3::new(-1.0, -(config.output_size.1 as f32 / config.output_size.0 as f32), -1.0),
+        width: config.output_size.0,
+        height: config.output_size.1
     });
 
     let mut buffer = vec![0u8; camera.width * camera.height * 3];
@@ -127,14 +120,15 @@ fn main() {
             let start = i * chunk_buffer_size;
             let shared_camera = camera.clone();
             let shared_scene = scene.clone();
+            let shared_config = config.clone();
 
             scope.execute(move || {
-                trace(shared_camera, shared_scene, start / 3, &mut chunk);
+                trace(shared_camera, shared_scene, shared_config, start / 3, &mut chunk);
             });
         }
     });
 
     println!("All threads finished in {}s", timer.count_seconds());
 
-    write_ppm(&buffer, (camera.width, camera.height), "test2.ppm");
+    write_ppm(&buffer, (camera.width, camera.height), &config.output_image);
 }
