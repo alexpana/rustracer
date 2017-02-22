@@ -1,5 +1,7 @@
 extern crate rand;
 extern crate crossbeam;
+extern crate scoped_pool;
+extern crate clap;
 
 mod vec3;
 mod ray;
@@ -15,6 +17,7 @@ use camera::Camera;
 use sampling::*;
 use time::Timer;
 
+use clap::{Arg, App, value_t};
 use std::f32;
 use std::fs::File;
 use std::io::prelude::*;
@@ -23,7 +26,7 @@ use std::thread;
 
 const T_MIN: f32 = 0.001;
 const T_MAX: f32 = f32::MAX;
-const SAMPLE_COUNT: usize = 100;
+const SAMPLE_COUNT: usize = 300;
 
 fn color(ray: Ray, scene: &Scene) -> Vec3 {
     let hit = scene.hit(ray, T_MIN, T_MAX);
@@ -45,7 +48,7 @@ fn color(ray: Ray, scene: &Scene) -> Vec3 {
 fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buffer: &mut [u8]) {
     let timer = Timer::new();
 
-    print!("Started tracing at offset {}\n", offset);
+    //    print!("Started tracing at offset {}\n", offset);
 
     let camera = &shared_camera;
 
@@ -64,7 +67,7 @@ fn trace(shared_camera: Arc<Camera>, scene: Arc<Scene>, offset: usize, image_buf
         image_buffer[i * 3 + 2] = (color_acc.z * 255.0) as u8;
     }
 
-    print!("Done tracing at offset {} in {}s\n", offset, timer.count_seconds());
+    //    print!("Done tracing at offset {} in {}s\n", offset, timer.count_seconds());
 }
 
 fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
@@ -85,7 +88,21 @@ fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
 }
 
 fn main() {
-    const THREAD_COUNT: usize = 8;
+    const CHUNK_COUNT: usize = 100;
+
+    let matches = App::new("rustracer")
+        .version("1.0")
+        .author("Alexandru Pana <astronothing@gmail.com>")
+        .about("Simple Ray Tracer")
+        .arg(Arg::with_name("thread_count")
+            .short("tc")
+            .long("thread_count")
+            //            .value_name("FILE")
+            .help("Sets the number of threads")
+            .takes_value(true))
+        .get_matches();
+
+    let thread_count = value_t!(matches.value_of("thread_count"), usize).unwrap_or(8);
 
     let scene = Arc::new(Scene {
         objects: vec![
@@ -106,8 +123,28 @@ fn main() {
     let mut buffer = vec![0u8; camera.width * camera.height * 3];
 
     let timer = Timer::new();
-    crossbeam::scope(|scope| {
-        let chunk_buffer_size = (camera.width * camera.height * 3) / THREAD_COUNT;
+
+    //    crossbeam::scope(|scope| {
+    //        let chunk_buffer_size = (camera.width * camera.height * 3) / thread_count;
+    //        let chunks: Vec<&mut [u8]> = buffer.chunks_mut(chunk_buffer_size).collect();
+    //
+    //        for (i, mut chunk) in chunks.into_iter().enumerate() {
+    //            let start = i * chunk_buffer_size;
+    //            let shared_camera = camera.clone();
+    //            let shared_scene = scene.clone();
+    //
+    //            scope.spawn(move || {
+    //                trace(shared_camera, shared_scene, start / 3, &mut chunk);
+    //            });
+    //        }
+    //    });
+
+
+    use scoped_pool::Pool;
+    let pool = Pool::new(thread_count);
+
+    pool.scoped(|scope| {
+        let chunk_buffer_size = (camera.width * camera.height * 3) / CHUNK_COUNT;
         let chunks: Vec<&mut [u8]> = buffer.chunks_mut(chunk_buffer_size).collect();
 
         for (i, mut chunk) in chunks.into_iter().enumerate() {
@@ -115,13 +152,13 @@ fn main() {
             let shared_camera = camera.clone();
             let shared_scene = scene.clone();
 
-            scope.spawn(move || {
+            scope.execute(move || {
                 trace(shared_camera, shared_scene, start / 3, &mut chunk);
             });
         }
     });
-    println!("All threads finished in {}s", timer.count_seconds());
 
+    println!("All threads finished in {}s", timer.count_seconds());
 
     write_ppm(&buffer, (camera.width, camera.height), "test2.ppm");
 }
