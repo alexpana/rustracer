@@ -1,15 +1,17 @@
-extern crate rand;
-extern crate scoped_pool;
 #[macro_use(value_t)]
 extern crate clap;
+extern crate rand;
+extern crate scoped_pool;
 
-mod vec3;
-mod ray;
-mod hittable;
 mod camera;
+mod config;
+mod hittable;
+mod ray;
 mod sampling;
 mod time;
+mod vec3;
 
+use config::Config;
 use vec3::*;
 use ray::*;
 use hittable::*;
@@ -17,7 +19,6 @@ use camera::Camera;
 use sampling::*;
 use time::Timer;
 
-use clap::{Arg, App, ArgMatches};
 use std::f32;
 use std::fs::File;
 use std::io::prelude::*;
@@ -87,45 +88,10 @@ fn write_ppm(image_buffer: &[u8], image_size: (usize, usize), file_name: &str) {
     }
 }
 
-struct Config {
-    thread_count: usize,
-    chunk_count: usize
-}
-
-impl Config {
-    pub fn new(matches: ArgMatches) -> Config {
-        Config {
-            thread_count: value_t!(matches.value_of("thread_count"), usize).unwrap_or(8),
-            chunk_count: value_t!(matches.value_of("chunk_count"), usize).unwrap_or(100)
-        }
-    }
-
-    pub fn print(&self) {
-        println!("Configuration:");
-        println!("  thread_count\t{}", self.thread_count);
-        println!("  chunk_count\t{}", self.chunk_count);
-    }
-}
-
 fn main() {
     const CHUNK_COUNT: usize = 100;
 
-    let matches = App::new("rustracer")
-        .version("1.0")
-        .author("Alexandru Pana <astronothing@gmail.com>")
-        .about("Simple Ray Tracer")
-        .arg(Arg::with_name("thread_count")
-            .short("tc")
-            .long("thread_count")
-            .help("Sets the number of threads")
-            .takes_value(true))
-        .arg(Arg::with_name("chunk_count")
-            .short("cc")
-            .long("chunk_count")
-            .help("Sets the number of chunks")
-            .takes_value(true))
-        .get_matches();
-
+    let matches = Config::get_app().get_matches();
     let config = Config::new(matches);
     config.print();
 
