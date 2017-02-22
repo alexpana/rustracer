@@ -1,5 +1,4 @@
-use vec3::{blend, Vec3};
-use vec3;
+use vec3::{self, blend, Vec3};
 use ray::*;
 
 use std::f32;
